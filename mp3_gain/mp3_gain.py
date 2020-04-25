@@ -10,12 +10,14 @@ Created on Sat Apr 25 15:11:43 2020
 
 import os
 import sys
+import inspect
 
 #----Disable 笨訊息-----
 import warnings
 warnings.filterwarnings("ignore")
 
 ''' 一路試了好多函數才找到目前程式的位置
+
 from pathlib import Path
 
 path = Path(__file__).parent.absolute()
@@ -37,10 +39,19 @@ isadirectory = filePath.is_dir()
 print('isadirectory : {}'.format(isadirectory))
 
 print(os.path.realpath(__file__))
+print(sys.argv[0])
 print(os.path.dirname(sys.argv[0])  )
+print(__file__)
+print (inspect.getfile(inspect.currentframe()))
+print (os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
 input("A")
 '''
-
+ffmpeg_path=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+#print(ffmpeg_path)
+ffmpeg_path=os.path.join(ffmpeg_path,os.path.dirname(sys.argv[0]))
+#print(ffmpeg_path)
+os.environ["PATH"]=os.environ["PATH"]+";"+ffmpeg_path
+#print("PATH:",os.environ["PATH"])
 
 #pip install pydub
 from pydub import AudioSegment
@@ -48,11 +59,27 @@ import pydub
 #pydub.AudioSegment.converter = os.path.join(os.getcwd(),"ffmpeg.exe")
 #-----原來的Util/Which函數寫得很笨，這邊指定就好
 #----要在模組載入之後設定，其實這個AudioSegment模組只是Call ffmpeg工具，所以有些地方會不明當掉的原因在此
-AudioSegment.converter = os.path.join(os.path.dirname(sys.argv[0]),"ffmpeg.exe")
+'''
+ffmpeg_path=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+print(ffmpeg_path)
+ffmpeg_path=os.path.join(ffmpeg_path,os.path.dirname(sys.argv[0]),"ffmpeg.exe")
+print(ffmpeg_path)
+AudioSegment.converter=ffmpeg_path
+'''
+#AudioSegment.converter = os.path.join(os.path.dirname(sys.argv[0]),"ffmpeg.exe")
 
 
 #--------調整音量--------
 def adj_vol(src,tar,db):
+    from pathlib import Path
+    #AudioSegment.converter = os.path.join(os.path.dirname(sys.argv[0]),"ffmpeg.exe")
+    #ffmpeg_path=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    #print(ffmpeg_path)
+    #ffmpeg_path=os.path.join(ffmpeg_path,os.path.dirname(sys.argv[0]),"ffmpeg.exe")
+    #print(ffmpeg_path)
+    #AudioSegment.converter=ffmpeg_path
+    
+    #print(AudioSegment.converter)
     sound = AudioSegment.from_file(src, "mp3")
     
     change_in_dBFS=db-sound.dBFS
@@ -64,7 +91,7 @@ def adj_vol(src,tar,db):
        print("  ","#"*40)
        normalized_sound=sound.apply_gain(change_in_dBFS)
        print("   adj to:",str(normalized_sound.dBFS)[:6])
-       print("   Output to :",tar)
+       print("   Output to :",src)
        normalized_sound.export(tar, format="mp3")
        #print("   Remove Source:",src)
        os.remove(src)
