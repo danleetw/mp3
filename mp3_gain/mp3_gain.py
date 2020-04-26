@@ -70,8 +70,9 @@ AudioSegment.converter=ffmpeg_path
 
 
 #--------調整音量--------
-def adj_vol(src,tar,db):
+def adj_vol(src,tar,db,AnyOnly=False):
     from pathlib import Path
+    global db_gain_cnt
     #AudioSegment.converter = os.path.join(os.path.dirname(sys.argv[0]),"ffmpeg.exe")
     #ffmpeg_path=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     #print(ffmpeg_path)
@@ -85,26 +86,52 @@ def adj_vol(src,tar,db):
     change_in_dBFS=db-sound.dBFS
     
     print(" DB:",str(sound.dBFS)[:6])
+    
     #----正負差3才調整
     if abs(change_in_dBFS)>3:
-       print("  Gain")
-       print("  ","#"*40)
-       normalized_sound=sound.apply_gain(change_in_dBFS)
-       print("   adj to:",str(normalized_sound.dBFS)[:6])
-       print("   Output to :",src)
-       normalized_sound.export(tar, format="mp3")
-       #print("   Remove Source:",src)
-       os.remove(src)
-       #print("   Rename ",tar, " to ",src)
-       os.rename(tar,src)
-    else:
-       print("  Pass") 
+       db_gain_cnt=db_gain_cnt+1 
+       if AnyOnly==False:
+           print("  Gain")
+           print("  ","#"*40)
+           normalized_sound=sound.apply_gain(change_in_dBFS)
+           
+           
+           print("   adj to:",str(normalized_sound.dBFS)[:6])
+           
+           print("   Output to :",src)
+           normalized_sound.export(tar, format="mp3")
+           #print("   Remove Source:",src)
+           os.remove(src)
+           #print("   Rename ",tar, " to ",src)
+           os.rename(tar,src)
+       else:
+           print("  Pass") 
    
     return sound.dBFS
 
 
+def getListOfFolders(dirName,IncludeFirst=False):
+    #---是否包含起始目錄
+    if IncludeFirst==True:
+       yield dirName 
+       
+    listOfFile = os.listdir(dirName)
+    # Iterate over all the entries
+    #逐一檢查目前目錄
+    for entry in listOfFile:
+        # Create full path
+        fullPath = os.path.join(dirName, entry)
+        
+        if os.path.isdir(fullPath):
 
-print("----Mp3 Gain----- Dan Lee 2020/04/25")
+            #先回傳此目錄               
+            yield  fullPath
+            #再次檢查此子目錄
+            for j in getListOfFolders(fullPath):
+                yield j
+                
+
+print("----Mp3 Gain----- Dan Lee 2020/04/26")
 
 
 
@@ -112,13 +139,14 @@ db_min=99
 db_max=-100
 db_cnt=0
 db_sum=0
+db_gain_cnt=0
 
 def adj_one_folder(src_path):
     global db_min
     global db_max
     global db_cnt
     global db_sum
-    
+    global db_gain_cnt
     
     if os.path.isdir(src_path):
        files=os.listdir(src_path)
@@ -156,6 +184,7 @@ def adj_one_folder(src_path):
             
             print(" DB Statics info")
             print("  Min:",str(db_min)[:6],"Avg:",str(db_sum/db_cnt)[:6],"Max:",str(db_max)[:6])
+            print("  Gain:",db_gain_cnt)
             print("--------------")
             
 def wait_key():
@@ -183,13 +212,31 @@ def wait_key():
     return result
 
 
+
+
+#a=getListOfFolders("Z:",True)
+#for i in a:
+#    print(i)
+#    adj_one_folder(i)
+#quit()
+
+
+
 #--------Main Program--------------------------------------------------
 
 file_paths = sys.argv[1:]  # the first argument is the script itself
 
+#file_paths=("Z:",)
+#file_paths=(r"d:\music\ipod\out",)
+
 if len(file_paths)>0:
     for src_path in file_paths:
-        adj_one_folder(src_path)
+        folders=getListOfFolders(src_path,True)
+        for folder in folders:
+            adj_one_folder(folder)
+            #adj_one_folder(src_path)
+        
+        
     if db_cnt==0:
         print("No any mp3 files to adj!")
     else:
